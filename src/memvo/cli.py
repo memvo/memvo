@@ -45,7 +45,7 @@ def cmd_import(args) -> int:
     with _vault(args) as v:
         r = v.import_csv(args.file, args.account, kind=args.kind, columns=_parse_map(args.map))
     lines = [
-        f"{r.account}: {r.added} entries added from {Path(r.path).name}",
+        f"{r.account}: {r.added} entries added from {Path(r.path).name} ({r.format})",
         f"source sha256 {r.sha256[:16]}…",
     ]
     if r.already_present:
@@ -53,7 +53,10 @@ def cmd_import(args) -> int:
     if r.skipped:
         lines.append(f"{len(r.skipped)} rows skipped:")
         lines += [f"  line {n}: {why}" for n, why in r.skipped[:10]]
-    lines.append("columns: " + ", ".join(f"{k}={v}" for k, v in r.columns.items()))
+    if r.columns:
+        lines.append("columns: " + ", ".join(f"{k}={v}" for k, v in r.columns.items()))
+    if r.statement_balance is not None:
+        lines.append(f"statement balance {r.statement_balance} as of {r.statement_as_of}")
     _emit(args, r.__dict__, "\n".join(lines))
     return 0
 
@@ -129,12 +132,14 @@ def cmd_audit(args) -> int:
 
 def cmd_reconcile(args) -> int:
     try:
-        expected = to_scaled(parse_amount(args.expect)) if args.expect else None
+        use_statement = args.expect == "statement"
+        expected = to_scaled(parse_amount(args.expect)) if args.expect and not use_statement else None
         opening = to_scaled(parse_amount(args.opening)) if args.opening else 0
     except AmountError as exc:
         raise SystemExit(str(exc)) from exc
     with _vault(args) as v:
-        rep = reconcile(v, args.account, expected=expected, as_of=args.as_of, opening=opening)
+        rep = reconcile(v, args.account, expected=expected, as_of=args.as_of, opening=opening,
+                        use_statement=use_statement)
     lines = []
     for c in rep.chains:
         state = "unbroken" if not c.breaks else f"{len(c.breaks)} breaks"
@@ -143,7 +148,8 @@ def cmd_reconcile(args) -> int:
             lines.append(f"  {b.day} {b.entry}: expected {b.expected}, statement says {b.stated} (off by {b.diff})")
     if rep.expected is not None:
         lines.append(
-            f"as of {rep.as_of or 'latest'}: entries add up to {rep.computed}, expected {rep.expected}, "
+            f"as of {rep.as_of or 'latest'}: entries add up to {rep.computed}, "
+            f"{'statement says' if rep.expected_from == 'statement' else 'expected'} {rep.expected}, "
             f"difference {rep.difference}"
         )
     if not lines:
@@ -176,7 +182,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("init", parents=[common], help="create a vault").set_defaults(fn=cmd_init)
 
-    s = sub.add_parser("import", parents=[common], help="import a CSV statement")
+    s = sub.add_parser("import", parents=[common], help="import a CSV or OFX/QFX statement")
     s.add_argument("file")
     s.add_argument("--account", required=True)
     s.add_argument("--kind", default="bank", choices=["bank", "card", "broker", "wallet", "cash", "other"])
@@ -207,7 +213,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("reconcile", parents=[common], help="check balances")
     s.add_argument("--account", required=True)
-    s.add_argument("--expect", help="balance shown on the statement or wallet")
+    s.add_argument("--expect", help="balance shown on the statement or wallet, or 'statement' to use the "
+                   "ledger balance from the newest imported OFX")
     s.add_argument("--as-of", help="YYYY-MM-DD, default: all entries")
     s.add_argument("--opening", help="opening balance before the first entry")
     s.set_defaults(fn=cmd_reconcile)

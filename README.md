@@ -8,7 +8,7 @@ was read from. It never summarises, categorises with a model, or sends data
 anywhere. Your vault is one SQLite file on your machine.
 
 > **Status: pre-alpha.** Output above is from `tests/fixtures/checking.csv`. CSV import, search, audit and reconcile work and are
-> tested, and agents can read the vault over MCP. OFX/PDF import and on-chain wallet import are not
+> tested, and agents can read the vault over MCP. PDF import and on-chain wallet import are not
 > built yet. See [Status](#status).
 
 ## Why
@@ -72,6 +72,7 @@ The vault lives at `~/.memvo/vault.db`, or `$MEMVO_HOME/vault.db`, or wherever
 memvo import ~/Downloads/checking.csv --account checking
 memvo import mutasi.csv --account tabungan          # ; separators, 1.234,56 amounts, debet/kredit columns
 memvo import export.csv --account broker --kind broker --map amount=Net
+memvo import download.qfx --account card            # OFX/QFX is recognised from the content
 
 memvo search rent                       # every hit carries its receipt
 memvo search coffee --period 2026-11
@@ -82,6 +83,7 @@ memvo periods --account checking
 
 memvo audit                             # re-hash every source, check every row
 memvo reconcile --account checking --expect 4131.82
+memvo reconcile --account checking --expect statement   # use the ledger balance in the newest OFX
 ```
 
 Add `--json` to any command for machine-readable output.
@@ -98,6 +100,13 @@ looking at all its dates.
 
 Rows that cannot be parsed are listed with their line number and reason. They
 are never guessed.
+
+OFX and QFX files (the "Download for Quicken/Money" option many banks offer)
+are read in both the old SGML form and the XML form. Each `<STMTTRN>` block is
+stored verbatim as one entry, its `FITID` is kept as the bank reference, and
+the statement's ledger balance is remembered for `reconcile --expect statement`.
+Overlapping downloads are matched on `FITID`. Files that are not UTF-8 are read
+as Windows-1252.
 
 ### Audit
 
@@ -117,7 +126,8 @@ run in a cron job or CI.
   duplicated or misread row. Newest-first and oldest-first files both work.
 - **Expected balance.** `--expect` compares the sum of entries (plus
   `--opening`, up to `--as-of`) with a figure you read off a statement or a
-  wallet.
+  wallet. `--expect statement` takes that figure from the newest imported
+  OFX ledger balance.
 
 ## Agents (MCP)
 
@@ -149,7 +159,7 @@ server tells the client to cite the source line instead of estimating.
 | Audit against source files | Live |
 | Reconcile (running and expected balance) | Live |
 | MCP server for agents (read-only) | Live |
-| OFX / QFX import | Planned |
+| OFX / QFX import (1.x SGML and 2.x XML) | Live |
 | PDF statement text import | Planned |
 | Wallet import from a public address | Planned |
 

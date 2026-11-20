@@ -39,6 +39,7 @@ class ChainResult:
 class ReconcileReport:
     account: str
     chains: list[ChainResult]
+    expected_from: str | None = None
     computed: str | None = None
     expected: str | None = None
     difference: str | None = None
@@ -56,6 +57,7 @@ class ReconcileReport:
             "as_of": self.as_of,
             "computed": self.computed,
             "expected": self.expected,
+            "expected_from": self.expected_from,
             "difference": self.difference,
             "running_balance": [
                 {"source": c.source_id, "path": c.path, "rows": c.rows_checked, "order": c.order,
@@ -91,7 +93,17 @@ def reconcile(
     expected: int | None = None,
     as_of: str | None = None,
     opening: int = 0,
+    use_statement: bool = False,
 ) -> ReconcileReport:
+    """use_statement: take `expected` and `as_of` from the newest imported
+    statement that states a ledger balance (OFX <LEDGERBAL>)."""
+    source = None
+    if use_statement:
+        stated = vault.statement_balance(account)
+        if stated is None:
+            raise ValueError(f"no imported statement for {account!r} states a balance")
+        expected, as_of = stated
+        source = "statement"
     chains = []
     for src in vault.sources():
         if src["account"] != account:
@@ -117,4 +129,5 @@ def reconcile(
         report.expected = fmt(expected)
         report.difference = fmt(expected - total)
         report.as_of = as_of
+        report.expected_from = source or "user"
     return report

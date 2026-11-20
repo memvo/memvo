@@ -17,9 +17,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .importers.csv_rows import read_csv
+from .importers.ofx_rows import looks_like_ofx, read_ofx
 from .money import fmt, to_scaled
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+
+_MIGRATIONS = {
+    # 1 -> 2: OFX support (bank transaction ids, statement ledger balance)
+    1: (
+        "ALTER TABLE sources ADD COLUMN stated_balance INTEGER",
+        "ALTER TABLE sources ADD COLUMN stated_as_of TEXT",
+        "ALTER TABLE entries ADD COLUMN ref TEXT NOT NULL DEFAULT ''",
+    ),
+}
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -38,6 +48,8 @@ CREATE TABLE IF NOT EXISTS sources (
     rows INTEGER NOT NULL,
     skipped INTEGER NOT NULL,
     imported_at TEXT NOT NULL,
+    stated_balance INTEGER,
+    stated_as_of TEXT,
     UNIQUE (sha256, account)
 );
 CREATE TABLE IF NOT EXISTS entries (
@@ -55,7 +67,8 @@ CREATE TABLE IF NOT EXISTS entries (
     description TEXT NOT NULL,
     counterparty TEXT NOT NULL,
     balance INTEGER,
-    fingerprint TEXT NOT NULL
+    fingerprint TEXT NOT NULL,
+    ref TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS entries_account_day ON entries(account, day);
 CREATE INDEX IF NOT EXISTS entries_fingerprint ON entries(fingerprint);
@@ -74,6 +87,14 @@ def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def decode_text(data: bytes) -> str:
+    """UTF-8 first; older OFX/CSV exports are often Windows-1252."""
+    try:
+        return data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return data.decode("cp1252", errors="replace")
+
+
 def sha256_text(text: str) -> str:
     return sha256_bytes(text.encode("utf-8"))
 
@@ -86,7 +107,9 @@ def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", text.lower())).strip()
 
 
-def fingerprint(account: str, day: str, amount: int, description: str) -> str:
+def fingerprint(account: str, day: str, amount: int, description: str, ref: str = "") -> str:
+    if ref:
+        return sha256_text(f"{account}|ref:{ref}")[:20]
     return sha256_text(f"{account}|{day}|{amount}|{_norm(description)}")[:20]
 
 
@@ -106,6 +129,9 @@ class ImportReport:
     already_present: int
     skipped: list[tuple[int, str]]
     columns: dict[str, str | None]
+    format: str = "csv"
+    statement_balance: str | None = None
+    statement_as_of: str | None = None
 
 
 @dataclass(frozen=True)
@@ -124,6 +150,7 @@ class Entry:
     source_sha256: str
     first_line: int
     last_line: int
+    ref: str = ""
 
     @property
     def amount_text(self) -> str:
@@ -138,6 +165,7 @@ class Entry:
             "source_sha256": self.source_sha256,
             "raw_sha256": self.raw_sha256,
             "raw": self.raw,
+            **({"bank_ref": self.ref} if self.ref else {}),
         }
 
     def as_dict(self) -> dict:
@@ -156,7 +184,7 @@ class Entry:
 
 _ENTRY_COLS = (
     "e.id, e.account, e.day, e.amount, e.currency, e.description, e.counterparty, e.balance, "
-    "e.raw, e.raw_sha256, s.path, s.sha256, e.first_line, e.last_line"
+    "e.raw, e.raw_sha256, s.path, s.sha256, e.first_line, e.last_line, e.ref"
 )
 
 
@@ -173,16 +201,27 @@ class Vault:
         self.db = sqlite3.connect(self.path)
         self.db.execute("PRAGMA foreign_keys = ON")
         try:
-            self.db.executescript(_SCHEMA)
+            self.db.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
             row = self.db.execute("SELECT value FROM meta WHERE key='schema'").fetchone()
-            if row is None:
+            version = int(row[0]) if row else None
+            if version is not None and version > SCHEMA_VERSION:
+                raise VaultError(f"vault schema {version} is newer than this memvo ({SCHEMA_VERSION})")
+            if version is not None and version < SCHEMA_VERSION:
+                self._migrate(version)
+            self.db.executescript(_SCHEMA)
+            if version is None:
                 self.db.execute("INSERT INTO meta VALUES ('schema', ?)", (str(SCHEMA_VERSION),))
                 self.db.commit()
-            elif int(row[0]) > SCHEMA_VERSION:
-                raise VaultError(f"vault schema {row[0]} is newer than this memvo ({SCHEMA_VERSION})")
         except Exception:
             self.db.close()
             raise
+
+    def _migrate(self, version: int) -> None:
+        with self.db:
+            for v in range(version, SCHEMA_VERSION):
+                for stmt in _MIGRATIONS[v]:
+                    self.db.execute(stmt)
+            self.db.execute("UPDATE meta SET value=? WHERE key='schema'", (str(SCHEMA_VERSION),))
 
     @classmethod
     def init(cls, path: Path | str | None = None) -> Vault:
@@ -233,7 +272,10 @@ class Vault:
             for a, p, n, i, o in self.db.execute(sql, args)
         ]
 
-    def import_csv(
+    def import_csv(self, path: Path | str, account: str, **kw) -> ImportReport:
+        return self.import_file(path, account, **kw)
+
+    def import_file(
         self,
         path: Path | str,
         account: str,
@@ -241,11 +283,22 @@ class Vault:
         kind: str = "bank",
         columns: dict[str, str] | None = None,
     ) -> ImportReport:
+        """Import a CSV or OFX/QFX file. The format is decided from the content."""
         p = Path(path).expanduser().resolve()
         data = p.read_bytes()
         digest = sha256_bytes(data)
-        text = data.decode("utf-8-sig", errors="strict")
-        parsed = read_csv(text, columns)
+        text = decode_text(data)
+        stated = stated_as_of = None
+        if looks_like_ofx(text):
+            fmt_name = "ofx"
+            ofx = read_ofx(text)
+            rows, skipped, cols = ofx.rows, ofx.skipped, {}
+            if ofx.ledger_balance is not None:
+                stated, stated_as_of = to_scaled(ofx.ledger_balance), ofx.ledger_as_of.isoformat()
+        else:
+            fmt_name = "csv"
+            parsed = read_csv(text, columns)
+            rows, skipped, cols = parsed.rows, parsed.skipped, _cols(parsed.columns)
 
         with self.db:
             self.ensure_account(account, kind)
@@ -257,33 +310,38 @@ class Vault:
                     "SELECT COUNT(*) FROM entries WHERE source_id=?", (existing[0],)
                 ).fetchone()[0]
                 return ImportReport(
-                    existing[0], str(p), digest, account, 0, count, parsed.skipped,
-                    _cols(parsed.columns),
+                    existing[0], str(p), digest, account, 0, count, skipped, cols, fmt_name,
+                    fmt(stated) if stated is not None else None, stated_as_of,
                 )
             cur = self.db.execute(
-                "INSERT INTO sources(path, sha256, account, format, rows, skipped, imported_at) "
-                "VALUES (?,?,?,?,?,?,?)",
-                (str(p), digest, account, "csv", len(parsed.rows), len(parsed.skipped), _now()),
+                "INSERT INTO sources(path, sha256, account, format, rows, skipped, imported_at, "
+                "stated_balance, stated_as_of) VALUES (?,?,?,?,?,?,?,?,?)",
+                (str(p), digest, account, fmt_name, len(rows), len(skipped), _now(), stated, stated_as_of),
             )
             source_id = cur.lastrowid
             added = 0
-            for row in parsed.rows:
+            for row in rows:
                 amount = to_scaled(row.amount)
                 day = row.when.isoformat()
                 self.db.execute(
                     "INSERT INTO entries(id, source_id, account, first_line, last_line, raw, raw_sha256, "
-                    "day, period, amount, currency, description, counterparty, balance, fingerprint) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "day, period, amount, currency, description, counterparty, balance, fingerprint, ref) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (
-                        entry_id(digest, row.first_line, row.raw), source_id, account,
+                        entry_id(digest, row.first_line if row.pos is None else row.pos, row.raw),
+                        source_id, account,
                         row.first_line, row.last_line, row.raw, sha256_text(row.raw),
                         day, day[:7], amount, row.currency, row.description, row.counterparty,
                         to_scaled(row.balance) if row.balance is not None else None,
-                        fingerprint(account, day, amount, row.description or row.counterparty),
+                        fingerprint(account, day, amount, row.description or row.counterparty, row.ref),
+                        row.ref,
                     ),
                 )
                 added += 1
-        return ImportReport(source_id, str(p), digest, account, added, 0, parsed.skipped, _cols(parsed.columns))
+        return ImportReport(
+            source_id, str(p), digest, account, added, 0, skipped, cols, fmt_name,
+            fmt(stated) if stated is not None else None, stated_as_of,
+        )
 
     def get(self, entry_id_: str) -> Entry | None:
         row = self.db.execute(
@@ -336,11 +394,21 @@ class Vault:
 
     def sources(self) -> list[dict]:
         return [
-            {"id": i, "path": p, "sha256": h, "account": a, "rows": r, "skipped": s, "imported_at": t}
-            for i, p, h, a, r, s, t in self.db.execute(
-                "SELECT id, path, sha256, account, rows, skipped, imported_at FROM sources ORDER BY id"
+            {"id": i, "path": p, "sha256": h, "account": a, "format": f, "rows": r, "skipped": s,
+             "imported_at": t, "stated_balance": sb, "stated_as_of": sa}
+            for i, p, h, a, f, r, s, t, sb, sa in self.db.execute(
+                "SELECT id, path, sha256, account, format, rows, skipped, imported_at, stated_balance, "
+                "stated_as_of FROM sources ORDER BY id"
             )
         ]
+
+    def statement_balance(self, account: str) -> tuple[int, str] | None:
+        """Latest ledger balance stated by an imported statement for this account."""
+        return self.db.execute(
+            "SELECT stated_balance, stated_as_of FROM sources WHERE account=? AND stated_balance IS NOT NULL "
+            "ORDER BY stated_as_of DESC, id DESC LIMIT 1",
+            (account,),
+        ).fetchone()
 
     def stats(self) -> dict:
         n_entries, n_accounts, n_sources = self.db.execute(

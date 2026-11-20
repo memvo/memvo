@@ -85,7 +85,8 @@ TOOLS: list[dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "account": {"type": "string"},
-                "expected": {"type": "string", "description": "e.g. \"4131.82\" or \"1.955.000,00\""},
+                "expected": {"type": "string", "description": "e.g. \"4131.82\" or \"1.955.000,00\", "
+                             "or \"statement\" for the newest imported OFX ledger balance"},
                 "as_of": _DATE,
                 "opening": {"type": "string"},
             },
@@ -147,10 +148,16 @@ class Server:
 
     @staticmethod
     def _reconcile(v: Vault, a: dict) -> dict:
-        rep = reconcile(
-            v, a["account"], expected=_money(a.get("expected"), "expected"),
-            as_of=a.get("as_of"), opening=_money(a.get("opening"), "opening") or 0,
-        )
+        use_statement = a.get("expected") == "statement"
+        try:
+            rep = reconcile(
+                v, a["account"],
+                expected=None if use_statement else _money(a.get("expected"), "expected"),
+                as_of=a.get("as_of"), opening=_money(a.get("opening"), "opening") or 0,
+                use_statement=use_statement,
+            )
+        except ValueError as exc:
+            raise ToolError(str(exc)) from exc
         return rep.as_dict()
 
     def call_tool(self, name: str, args: dict) -> dict:

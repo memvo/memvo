@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .vault import Vault, sha256_bytes, sha256_text
+from .vault import Vault, decode_text, sha256_bytes, sha256_text
 
 
 @dataclass
@@ -54,11 +54,12 @@ def audit(vault: Vault) -> AuditReport:
         if sha256_bytes(data) != src["sha256"]:
             checks.append(SourceCheck(src["id"], src["path"], "changed", len(rows)))
             continue
-        lines = data.decode("utf-8-sig").splitlines(keepends=True)
+        lines = decode_text(data).splitlines(keepends=True)
         bad = []
+        # CSV rows equal their line range; an OFX block may share a line with others.
         for eid, first, last, raw, raw_sha in rows:
             on_disk = "".join(lines[first - 1 : last]).rstrip("\r\n")
-            if on_disk != raw or sha256_text(raw) != raw_sha:
+            if raw not in on_disk or sha256_text(raw) != raw_sha:
                 bad.append(eid)
         checks.append(SourceCheck(src["id"], src["path"], "ok", len(rows), bad))
 
