@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from memvo.audit import audit
@@ -88,7 +90,7 @@ def test_audit_ok_changed_missing_and_tampered_row(vault, files):
 
     (files / "checking.csv").write_text("changed\n")
     (files / "tabungan.csv").unlink()
-    statuses = {s.path.rsplit("/", 1)[-1]: s.status for s in audit(vault).sources}
+    statuses = {Path(s.path).name: s.status for s in audit(vault).sources}
     assert statuses == {"checking.csv": "changed", "tabungan.csv": "missing", "broker.csv": "ok"}
     assert audit(vault).as_dict()["ok"] is False
 
