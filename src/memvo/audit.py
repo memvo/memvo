@@ -1,0 +1,72 @@
+"""Audit: prove that every stored entry still matches the file it came from.
+
+For each source the file is re-read and re-hashed. If the hash matches, every
+entry from it is checked line by line against the bytes on disk. If the file
+changed or disappeared, its entries are reported, never silently rewritten.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from .vault import Vault, sha256_bytes, sha256_text
+
+
+@dataclass
+class SourceCheck:
+    source_id: int
+    path: str
+    status: str  # ok | changed | missing
+    entries: int
+    mismatched: list[str] = field(default_factory=list)
+
+
+@dataclass
+class AuditReport:
+    sources: list[SourceCheck]
+    duplicates: list[list[str]]
+
+    @property
+    def ok(self) -> bool:
+        return all(s.status == "ok" and not s.mismatched for s in self.sources)
+
+    def as_dict(self) -> dict:
+        return {
+            "ok": self.ok,
+            "sources": [s.__dict__ for s in self.sources],
+            "possible_duplicates": self.duplicates,
+        }
+
+
+def audit(vault: Vault) -> AuditReport:
+    checks: list[SourceCheck] = []
+    for src in vault.sources():
+        rows = vault.db.execute(
+            "SELECT id, first_line, last_line, raw, raw_sha256 FROM entries WHERE source_id=? ORDER BY first_line",
+            (src["id"],),
+        ).fetchall()
+        path = Path(src["path"])
+        if not path.exists():
+            checks.append(SourceCheck(src["id"], src["path"], "missing", len(rows)))
+            continue
+        data = path.read_bytes()
+        if sha256_bytes(data) != src["sha256"]:
+            checks.append(SourceCheck(src["id"], src["path"], "changed", len(rows)))
+            continue
+        lines = data.decode("utf-8-sig").splitlines(keepends=True)
+        bad = []
+        for eid, first, last, raw, raw_sha in rows:
+            on_disk = "".join(lines[first - 1 : last]).rstrip("\r\n")
+            if on_disk != raw or sha256_text(raw) != raw_sha:
+                bad.append(eid)
+        checks.append(SourceCheck(src["id"], src["path"], "ok", len(rows), bad))
+
+    dupes = [
+        ids.split(",")
+        for (ids,) in vault.db.execute(
+            """SELECT GROUP_CONCAT(id) FROM entries GROUP BY fingerprint
+               HAVING COUNT(DISTINCT source_id) > 1 ORDER BY MIN(day)"""
+        )
+    ]
+    return AuditReport(checks, dupes)
