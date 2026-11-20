@@ -8,7 +8,7 @@ was read from. It never summarises, categorises with a model, or sends data
 anywhere. Your vault is one SQLite file on your machine.
 
 > **Status: pre-alpha.** Output above is from `tests/fixtures/checking.csv`. CSV import, search, audit and reconcile work and are
-> tested. The MCP server, OFX/PDF import and on-chain wallet import are not
+> tested, and agents can read the vault over MCP. OFX/PDF import and on-chain wallet import are not
 > built yet. See [Status](#status).
 
 ## Why
@@ -119,6 +119,27 @@ run in a cron job or CI.
   `--opening`, up to `--as-of`) with a figure you read off a statement or a
   wallet.
 
+## Agents (MCP)
+
+`memvo mcp` runs a Model Context Protocol server on stdio. Register it in any
+MCP client:
+
+```json
+{
+  "mcpServers": {
+    "memvo": { "command": "memvo", "args": ["mcp"] }
+  }
+}
+```
+
+Tools: `memvo_search`, `memvo_get_entry`, `memvo_accounts`, `memvo_periods`,
+`memvo_audit`, `memvo_reconcile`, `memvo_stats`.
+
+The server is read-only. An agent can search, inspect and check, but it
+cannot import, edit or delete anything; importing stays a step you take
+yourself. Every result that mentions an entry carries its receipt, and the
+server tells the client to cite the source line instead of estimating.
+
 ## Status
 
 | Feature | State |
@@ -127,7 +148,7 @@ run in a cron job or CI.
 | Search with receipts | Live |
 | Audit against source files | Live |
 | Reconcile (running and expected balance) | Live |
-| MCP server for agents | Planned |
+| MCP server for agents (read-only) | Live |
 | OFX / QFX import | Planned |
 | PDF statement text import | Planned |
 | Wallet import from a public address | Planned |

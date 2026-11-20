@@ -152,6 +152,13 @@ def cmd_reconcile(args) -> int:
     return 0 if rep.ok else 2
 
 
+def cmd_mcp(args) -> int:
+    from .mcp import Server
+
+    Server(args.vault or default_vault_path()).serve()
+    return 0
+
+
 def cmd_stats(args) -> int:
     with _vault(args) as v:
         s = v.stats()
@@ -206,6 +213,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(fn=cmd_reconcile)
 
     sub.add_parser("stats", parents=[common], help="vault summary").set_defaults(fn=cmd_stats)
+    sub.add_parser("mcp", parents=[common], help="run the read-only MCP server on stdio").set_defaults(fn=cmd_mcp)
     return p
 
 

@@ -8,3 +8,4 @@
 - `search` with full-text matching; every hit carries a receipt.
 - `audit` re-hashes sources and checks each row against the file.
 - `reconcile` checks running balances and an expected balance.
+- `memvo mcp`: read-only MCP server on stdio with seven tools; results carry receipts.
