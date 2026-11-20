@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memvo · Every number has a receipt</title>
+<meta name="description" content="Local-first financial memory for agents. Import your statements once; every answer comes with the line it came from. MIT licensed, no network calls.">
+<meta name="theme-color" content="#070B16">
+<link rel="icon" href="/assets/mark.svg" type="image/svg+xml">
+<link rel="canonical" href="https://memvo.pro/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://memvo.pro/">
+<meta property="og:title" content="Memvo · Every number has a receipt">
+<meta property="og:description" content="Local-first financial memory for agents. Every answer comes with the line it came from.">
+<meta property="og:image" content="https://memvo.pro/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="/assets/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/hero-poster.webp" as="image" fetchpriority="high">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav" id="top">
+  <a class="brand" href="#top" aria-label="Memvo home">
+    <img src="/assets/mark.svg" alt="" width="28" height="28">
+    <span>MEMVO</span>
+  </a>
+  <nav aria-label="Sections">
+    <a href="#guess">Guess</a>
+    <a href="#anatomy">Anatomy</a>
+    <a href="#receipt">Receipt</a>
+    <a href="#mechanics">Mechanics</a>
+    <a href="#begin">Begin</a>
+    <a href="https://github.com/memvo/memvo" rel="noopener">GitHub ↗</a>
+  </nav>
+</header>
+
+<main id="main">
+
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero-media" aria-hidden="true">
+    <video id="hero-video" autoplay muted loop playsinline preload="metadata" poster="/assets/hero-poster.webp" width="1280" height="720">
+      <source src="/assets/hero-loop.webm" type="video/webm">
+      <source src="/assets/hero-loop.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div class="hero-copy">
+    <p class="mark">Local-first · verbatim · MIT</p>
+    <h1 id="hero-title" class="display">Every number has a <em>receipt.</em></h1>
+    <p class="lede">Memvo keeps your bank, card and broker statements on your own machine, word for word. Ask an agent about your money and it answers with the line it came from, or says it found nothing.</p>
+    <div class="install" role="group" aria-label="Install command">
+      <code id="install-cmd">pip install git+https://github.com/memvo/memvo</code>
+      <button type="button" class="copy" data-copy="install-cmd">Copy</button>
+    </div>
+    <p class="links"><a href="https://github.com/memvo/memvo" rel="noopener">Source on GitHub ↗</a><span aria-hidden="true">·</span><a href="#begin">See it run</a></p>
+  </div>
+  <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span>
+  <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
+</section>
+
+<section class="section" id="guess" aria-labelledby="guess-title">
+  <p class="mark"><span class="num">I</span> The guess</p>
+  <h2 id="guess-title" class="display">Same question. <em>One</em> can show its work.</h2>
+  <p class="lede">"What did I pay Streamly in November?" On the left, an assistant answering from habit. On the right, the same assistant reading a Memvo vault built from <a href="https://github.com/memvo/memvo/blob/main/tests/fixtures/checking.csv" rel="noopener">this sample statement</a>.</p>
+  <div class="split">
+    <article class="card">
+      <header class="card-head"><span>Without Memvo</span><span class="dim">Illustration</span></header>
+      <p class="q">What did I pay Streamly in November?</p>
+      <p class="a">Probably around $15.99. That is what most monthly plans cost.</p>
+      <p class="foot bad">No source · Wrong by 2.00</p>
+    </article>
+    <article class="card lit">
+      <header class="card-head"><span>With Memvo</span><span class="ice">memvo_search</span></header>
+      <p class="q">What did I pay Streamly in November?</p>
+      <p class="a">-17.99 on 2026-11-05. October was -15.99, so the price went up by 2.00.</p>
+      <p class="foot ok">checking.csv:7 · sha256 7e61003a…</p>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="anatomy" aria-labelledby="anatomy-title">
+  <p class="mark"><span class="num">II</span> Anatomy of a vault</p>
+  <div class="intro-row">
+    <h2 id="anatomy-title" class="display">Vault. Accounts. Periods. Entries. <em>Receipts.</em></h2>
+    <p class="lede">The way you already think about money, kept on disk. Nothing is summarised on the way in, so nothing can drift from what the bank sent you.</p>
+  </div>
+  <ol class="anatomy">
+    <li>
+      <img src="/assets/vault.webp" alt="A closed glass cube made of stacked plates" width="640" height="640" loading="lazy">
+      <p class="tag">V · vault</p>
+      <h3>The vault</h3>
+      <p>One SQLite file at <code>~/.memvo/vault.db</code>. Copy it, back it up, delete it. Nothing else holds your data.</p>
+    </li>
+    <li>
+      <img src="/assets/accounts.webp" alt="Three separate stacks of glass plates" width="640" height="640" loading="lazy">
+      <p class="tag">A · account</p>
+      <h3>Accounts</h3>
+      <p>Checking, savings, card, broker. Each import names its account, so totals never mix.</p>
+    </li>
+    <li>
+      <img src="/assets/periods.webp" alt="Twelve glass plates in an arc, one lit" width="640" height="640" loading="lazy">
+      <p class="tag">P · period</p>
+      <h3>Periods</h3>
+      <p>Months. <code>memvo periods</code> shows money in and out for each one, per account.</p>
+    </li>
+    <li>
+      <img src="/assets/entries.webp" alt="One long glass strip" width="640" height="640" loading="lazy">
+      <p class="tag">E · entry</p>
+      <h3>Entries</h3>
+      <p>One transaction, stored as the exact text from the file, with its amount as an exact integer, never a float.</p>
+    </li>
+    <li>
+      <img src="/assets/receipts.webp" alt="A lit glass plate standing on a plinth" width="640" height="640" loading="lazy">
+      <p class="tag">R · receipt</p>
+      <h3>Receipts</h3>
+      <p>Where an entry came from: file, line range, file hash, row hash. Every answer carries one.</p>
+    </li>
+  </ol>
+</section>
+
+<section class="section" id="receipt" aria-labelledby="receipt-title">
+  <p class="mark"><span class="num">III</span> The receipt</p>
+  <h2 id="receipt-title" class="display">Not a summary. <em>The line itself.</em></h2>
+  <p class="lede">This is real output from <code>memvo show</code> on the sample statement. If someone edits the file later, <code>memvo audit</code> notices, because the hashes stop matching.</p>
+  <div class="split">
+    <article class="card">
+      <header class="card-head"><span>Entry · e_87f7eaf199f9cde5</span><span class="dim">stored</span></header>
+      <dl class="kv">
+        <div><dt>date</dt><dd>2026-11-05</dd></div>
+        <div><dt>amount</dt><dd>-17.99</dd></div>
+        <div><dt>account</dt><dd>checking</dd></div>
+        <div><dt>text</dt><dd>STREAMLY SUBSCRIPTION, MONTHLY</dd></div>
+      </dl>
+    </article>
+    <article class="card lit">
+      <header class="card-head"><span>Receipt</span><span class="ice">verifiable</span></header>
+      <dl class="kv">
+        <div><dt>source</dt><dd>checking.csv, line 7</dd></div>
+        <div><dt>file sha256</dt><dd class="hash">7e61003a02cb6628f28bcbd0e17aba1cef8d823813df4f95324ecfc53c8bdbdb</dd></div>
+        <div><dt>row sha256</dt><dd class="hash">6fe2f1f304317c9b9e6e96db7823ae80c72b38804c7ced445335d126a9a81ac5</dd></div>
+        <div><dt>raw</dt><dd class="raw" data-type>2026-11-05,"STREAMLY SUBSCRIPTION, MONTHLY",-17.99,4131.82</dd></div>
+      </dl>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="mechanics" aria-labelledby="mechanics-title">
+  <p class="mark"><span class="num">IV</span> How it works</p>
+  <h2 id="mechanics-title" class="display">Five pieces. <em>No cloud.</em> No keys.</h2>
+  <div class="mech">
+    <article>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="1"/><path d="M4 10h16M9 15h6"/></svg>
+      <p class="tag">01</p>
+      <h3>Local-first</h3>
+      <p>Python standard library only. No network calls, no telemetry, no account. It works on a plane.</p>
+      <p class="meta">Dependencies · none</p>
+    </article>
+    <article>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9"/></svg>
+      <p class="tag">02</p>
+      <h3>Verbatim</h3>
+      <p>CSV, OFX and QFX, English or Indonesian headers, <code>1,234.56</code> or <code>1.234,56</code>. Bad rows are listed with a reason, never guessed.</p>
+      <p class="meta">Formats · CSV · OFX · QFX</p>
+    </article>
+    <article>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5 20 20M8.5 11l2 2 3.5-4"/></svg>
+      <p class="tag">03</p>
+      <h3>Audit</h3>
+      <p>Re-hashes every source and checks each stored row against the file on disk. Flags overlapping exports.</p>
+      <p class="meta">Exit code · 0 ok · 2 mismatch</p>
+    </article>
+    <article>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h12l-3-3M20 16H8l3 3"/></svg>
+      <p class="tag">04</p>
+      <h3>Reconcile</h3>
+      <p>Checks running balances row by row and compares totals with the balance your statement states.</p>
+      <p class="meta">Sample · difference 0.00</p>
+    </article>
+    <article>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="7" height="12" rx="1"/><rect x="14" y="6" width="7" height="12" rx="1"/><path d="M10 12h4"/></svg>
+      <p class="tag">05</p>
+      <h3>MCP, read-only</h3>
+      <p>Seven tools for agents: search, entry, accounts, periods, audit, reconcile, stats. None can write.</p>
+      <p class="meta">Command · memvo mcp</p>
+    </article>
+  </div>
+</section>
+
+<section class="section begin" id="begin" aria-labelledby="begin-title">
+  <p class="mark"><span class="num">V</span> Begin</p>
+  <h2 id="begin-title" class="display">Open your <em>vault.</em></h2>
+  <p class="lede">Real output from the sample statement in the repository. Your own statements never leave the folder you run this in.</p>
+  <div class="term" role="region" aria-label="Terminal session">
+    <div class="term-head"><span>~/statements · bash</span></div>
+<pre><code><span class="p">$</span> memvo init
+Vault created at ~/.memvo/vault.db
+<span class="p">$</span> memvo import checking.csv --account checking
+checking: 6 entries added from checking.csv (csv)
+source sha256 7e61003a02cb6628…
+columns: date=Date, amount=Amount, description=Description, balance=Balance
+<span class="p">$</span> memvo search streamly
+2026-11-05          -17.99  checking     STREAMLY SUBSCRIPTION, MONTHLY
+    e_87f7eaf199f9cde5  checking.csv:7
+2026-10-05          -15.99  checking     STREAMLY SUBSCRIPTION, MONTHLY
+    e_477cc512787183fc  checking.csv:4
+<span class="p">$</span> memvo audit
+[ok] checking.csv: 6 entries
+All entries match their sources.
+<span class="p">$</span> memvo reconcile --account checking --expect 4131.82
+running balance in checking.csv: 6 rows, oldest-first, unbroken
+as of latest: entries add up to 4,131.82, expected 4,131.82, difference <span class="ok">0.00</span></code></pre>
+  </div>
+  <p class="links center"><a class="btn" href="https://github.com/memvo/memvo#readme" rel="noopener">Read the README ↗</a><a class="btn ghost" href="https://github.com/memvo/memvo" rel="noopener">Visit the repository ↗</a></p>
+</section>
+
+<section class="section" id="status" aria-labelledby="status-title">
+  <p class="mark"><span class="num">VI</span> Status</p>
+  <h2 id="status-title" class="display">What works <em>today.</em></h2>
+  <table class="status">
+    <thead><tr><th scope="col">Feature</th><th scope="col">State</th></tr></thead>
+    <tbody>
+      <tr><td>CSV import (bank, card, broker)</td><td class="live">Live</td></tr>
+      <tr><td>OFX / QFX import</td><td class="live">Live</td></tr>
+      <tr><td>Search with receipts</td><td class="live">Live</td></tr>
+      <tr><td>Audit against source files</td><td class="live">Live</td></tr>
+      <tr><td>Reconcile (running and statement balance)</td><td class="live">Live</td></tr>
+      <tr><td>MCP server (read-only)</td><td class="live">Live</td></tr>
+      <tr><td>Package on PyPI</td><td class="planned">Planned</td></tr>
+      <tr><td>PDF statement import</td><td class="planned">Planned</td></tr>
+      <tr><td>Wallet import from a public address</td><td class="planned">Planned</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+
+<footer class="foot-cat">
+  <div>
+    <p class="brand-line"><img src="/assets/mark.svg" alt="" width="24" height="24"> Memvo</p>
+    <p class="dim">Local-first financial memory for agents. Verbatim storage, receipts on every answer, zero telemetry.</p>
+  </div>
+  <div>
+    <p class="tag">Project</p>
+    <ul>
+      <li><a href="https://github.com/memvo/memvo" rel="noopener">GitHub</a></li>
+      <li><a href="https://github.com/memvo/memvo/blob/main/CHANGELOG.md" rel="noopener">Changelog</a></li>
+      <li><a href="https://github.com/memvo/memvo/blob/main/SECURITY.md" rel="noopener">Security</a></li>
+      <li><a href="https://github.com/memvo/memvo/blob/main/LICENSE" rel="noopener">MIT License</a></li>
+    </ul>
+  </div>
+  <p class="legal dim">© 2026 Memvo contributors. memvo.pro, github.com/memvo and PyPI <code>memvo</code> (once published) are the only official sources. This site sets no cookies and loads nothing from third parties.</p>
+</footer>
+
+<script src="/main.js" defer></script>
+</body>
+</html>
