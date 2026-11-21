@@ -1,5 +1,7 @@
 # Memvo
 
+[memvo.pro](https://memvo.pro) · [X @MEMVOpro](https://x.com/MEMVOpro)
+
 Local-first financial memory. Import your statements once, then ask about
 your money and get the exact line each answer came from.
 

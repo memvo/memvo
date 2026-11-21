@@ -157,7 +157,7 @@ h2.display { font-size: clamp(34px, 5vw, 64px); max-width: 18ch; }
   .corner { display: none; }
 }
 @media (max-width: 720px) {
-  .nav nav a:not(:last-child) { display: none; }
+  .nav nav a:not(.gh) { display: none; }
   .hero-media { aspect-ratio: 4 / 3; }
   .split { grid-template-columns: 1fr; }
   .anatomy, .mech { grid-template-columns: 1fr; }
