@@ -1,0 +1,28 @@
+name: Bug
+description: Something Memvo does wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command you ran and its output.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versions
+      placeholder: memvo 0.1.0a1, Python 3.12, macOS 15
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: If a statement file is involved, attach a made-up copy with the same layout. Never attach a real statement.
