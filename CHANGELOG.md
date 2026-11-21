@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.1.0a1 (2026-11-22)
+
+First pre-release on PyPI. Pre-alpha: the vault schema may still change.
+
 - CSV import with header detection (English and Indonesian column names),
   sniffed separators, day/month order decided per file, multi-line records.
 - Vault in one SQLite file: accounts, periods, verbatim entries, source hashes.
