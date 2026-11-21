@@ -105,6 +105,12 @@ def _records(text: str, dialect: type[csv.Dialect] | csv.Dialect):
 def read_csv(text: str, overrides: dict[str, str] | None = None) -> CsvResult:
     if text.startswith("﻿"):
         text = text[1:]
+    if "\x00" in text:
+        # A text export never contains NUL; it means a corrupt or binary file.
+        # Python 3.10's csv module rejects it while later versions read it, so
+        # reject it here the same way on every version.
+        line = text.count("\n", 0, text.index("\x00")) + 1
+        raise ValueError(f"not a readable CSV file: NUL byte on line {line}")
     sample = text[:8192]
     try:
         dialect: type[csv.Dialect] | csv.Dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
@@ -114,7 +120,6 @@ def read_csv(text: str, overrides: dict[str, str] | None = None) -> CsvResult:
     try:
         records = [r for r in _records(text, dialect) if any(c.strip() for c in r[3])]
     except csv.Error as exc:
-        # Python 3.10's csv module rejects NUL bytes; later versions read them.
         raise ValueError(f"not a readable CSV file: {exc}") from exc
     if not records:
         return CsvResult(ColumnMap(date=""), [], [])
