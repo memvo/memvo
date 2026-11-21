@@ -195,3 +195,9 @@ a.gh { display: inline-flex; align-items: center; justify-content: center; min-w
 a.gh:hover, a.gh:focus-visible { color: var(--text); }
 .foot-cat a.gh { margin: -10px -10px -10px -10px; justify-content: flex-start; padding-left: 10px; }
 .gh-mark { display: block; }
+
+/* desktop: the hero copy lines up with the content column below instead of hugging the edge */
+@media (min-width: 1025px) {
+  .hero-copy { margin-left: max(0px, calc((100vw - var(--max)) / 2)); }
+  .hero-media video { transform: translateX(9%); }
+}
