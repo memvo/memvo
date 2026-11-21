@@ -46,7 +46,8 @@ def test_bad_cells_are_skipped_not_imported(seed):
     rng = random.Random(1000 + seed)
     for _ in range(300):
         lines = ["date,amount,balance,description"]
-        lines += [",".join(rng.choice(ODD_VALUES) for _ in range(4)) for _ in range(rng.randint(1, 5))]
+        values = [v for v in ODD_VALUES if v != "\x00"]
+        lines += [",".join(rng.choice(values) for _ in range(4)) for _ in range(rng.randint(1, 5))]
         result = read_csv("\n".join(lines))
         assert len(result.rows) + len(result.skipped) <= len(lines) - 1
         for row in result.rows:
@@ -80,14 +81,9 @@ def test_network_is_blocked_during_tests():
         socket.create_connection(("example.com", 443))
 
 
-def test_nul_bytes_are_read_or_rejected_cleanly():
-    text = "date,amount\n2026-11-01,-5.00\x00\n"
-    try:
-        result = read_csv(text)
-    except ValueError as exc:
-        assert "not a readable CSV file" in str(exc)
-    else:
-        assert len(result.rows) + len(result.skipped) == 1
+def test_nul_bytes_are_rejected_with_the_line():
+    with pytest.raises(ValueError, match="NUL byte on line 2"):
+        read_csv("date,amount\n2026-11-01,-5.00\x00\n")
 
 
 def test_csv_module_errors_become_value_errors(monkeypatch):
