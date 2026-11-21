@@ -61,7 +61,7 @@ vault ── accounts ── periods (YYYY-MM) ── entries ── receipt
 Requires Python 3.10 or newer. No other dependencies.
 
 ```bash
-pip install memvo   # not yet published; for now: pip install -e .
+pip install memvo   # 0.1.0a1, pre-alpha
 memvo init
 ```
 
