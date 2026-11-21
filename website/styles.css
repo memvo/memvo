@@ -198,6 +198,6 @@ a.gh:hover, a.gh:focus-visible { color: var(--text); }
 
 /* desktop: the hero copy lines up with the content column below instead of hugging the edge */
 @media (min-width: 1025px) {
-  .hero-copy { margin-left: max(0px, calc((100vw - var(--max)) / 2)); }
+  .hero-copy { margin-left: max(0px, calc((100vw - var(--max)) / 3)); }
   .hero-media video { transform: translateX(9%); }
 }
