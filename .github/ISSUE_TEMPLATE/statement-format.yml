@@ -1,0 +1,24 @@
+name: Statement format
+description: A bank or broker export Memvo cannot read yet
+labels: [format]
+body:
+  - type: input
+    id: source
+    attributes:
+      label: Bank or broker, and export option
+      placeholder: "Example Bank, Download > CSV (all columns)"
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Header row and two made-up rows
+      description: Keep the layout, replace every value. Never paste real data.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: What memvo import printed
+      render: text

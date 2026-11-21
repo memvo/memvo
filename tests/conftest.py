@@ -1,4 +1,5 @@
 import shutil
+import socket
 from pathlib import Path
 
 import pytest
@@ -21,3 +22,16 @@ def vault(tmp_path):
     v = Vault.init(tmp_path / "vault.db")
     yield v
     v.close()
+
+
+@pytest.fixture(autouse=True)
+def no_network(monkeypatch):
+    """Memvo promises it never goes online; any socket use fails the test."""
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("memvo tried to open a network connection")
+
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+    monkeypatch.setattr(socket.socket, "connect_ex", refuse)
+    monkeypatch.setattr(socket, "create_connection", refuse)
+    monkeypatch.setattr(socket, "getaddrinfo", refuse)

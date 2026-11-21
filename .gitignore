@@ -9,3 +9,6 @@ build/
 *.db
 .DS_Store
 .wrangler/
+
+# The memvo.pro site is deployed separately and is not part of the package.
+/website/

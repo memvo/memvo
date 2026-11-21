@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Tests: the suite now blocks all network access, and new robustness tests
+  feed the CSV and OFX readers random and malformed input.
+- Docs: `docs/threat-model.md` and `docs/mcp.md`; `CONTRIBUTING.md` and issue
+  templates.
+- CI: GitHub Actions pinned to commit SHAs, least-privilege permissions,
+  CodeQL, OpenSSF Scorecard and Dependabot.
+- The memvo.pro website moved out of this repository; it was never part of
+  the package.
+
 ## 0.1.0a1 (2026-11-22)
 
 First pre-release on PyPI. Pre-alpha: the vault schema may still change.

@@ -1,5 +1,11 @@
 # Memvo
 
+[![ci](https://github.com/memvo/memvo/actions/workflows/ci.yml/badge.svg)](https://github.com/memvo/memvo/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/memvo)](https://pypi.org/project/memvo/)
+[![Python](https://img.shields.io/pypi/pyversions/memvo)](https://pypi.org/project/memvo/)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/memvo/memvo/badge)](https://scorecard.dev/viewer/?uri=github.com/memvo/memvo)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 [memvo.pro](https://memvo.pro) · [X @MEMVOpro](https://x.com/MEMVOpro)
 
 Local-first financial memory. Import your statements once, then ask about
@@ -9,7 +15,7 @@ Memvo keeps every transaction verbatim, next to the SHA-256 of the file it
 was read from. It never summarises, categorises with a model, or sends data
 anywhere. Your vault is one SQLite file on your machine.
 
-> **Status: pre-alpha.** Output above is from `tests/fixtures/checking.csv`. CSV import, search, audit and reconcile work and are
+> **Status: pre-alpha.** The output below is from `tests/fixtures/checking.csv`. CSV import, search, audit and reconcile work and are
 > tested, and agents can read the vault over MCP. PDF import and on-chain wallet import are not
 > built yet. See [Status](#status).
 
@@ -133,7 +139,7 @@ run in a cron job or CI.
 
 ## Agents (MCP)
 
-`memvo mcp` runs a Model Context Protocol server on stdio. Register it in any
+`memvo mcp` runs a Model Context Protocol server on stdio ([tool reference](docs/mcp.md)). Register it in any
 MCP client:
 
 ```json
@@ -173,12 +179,14 @@ pip install -e '.[dev]'
 pytest --cov
 ```
 
-Coverage must stay at or above 90%.
+Coverage must stay at or above 90%, and the suite fails on any network
+access. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Privacy
 
 Memvo makes no network calls. Nothing is uploaded, and there is no
-telemetry. Delete the vault file and the data is gone.
+telemetry. Delete the vault file and the data is gone. The
+[threat model](docs/threat-model.md) lists each claim and how to check it.
 
 ## License
 
