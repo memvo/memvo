@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fix: on Python 3.10 a CSV file containing NUL bytes crashed the import with
+  `_csv.Error`; it is now rejected with a clear message. Found by the new
+  robustness tests.
 - Tests: the suite now blocks all network access, and new robustness tests
   feed the CSV and OFX readers random and malformed input.
 - Docs: `docs/threat-model.md` and `docs/mcp.md`; `CONTRIBUTING.md` and issue

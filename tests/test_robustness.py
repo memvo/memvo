@@ -78,3 +78,24 @@ def test_huge_file_is_read_in_one_pass():
 def test_network_is_blocked_during_tests():
     with pytest.raises(AssertionError):
         socket.create_connection(("example.com", 443))
+
+
+def test_nul_bytes_are_read_or_rejected_cleanly():
+    text = "date,amount\n2026-11-01,-5.00\x00\n"
+    try:
+        result = read_csv(text)
+    except ValueError as exc:
+        assert "not a readable CSV file" in str(exc)
+    else:
+        assert len(result.rows) + len(result.skipped) == 1
+
+
+def test_csv_module_errors_become_value_errors(monkeypatch):
+    import csv
+
+    def broken_reader(*args, **kwargs):
+        raise csv.Error("line contains NUL")
+
+    monkeypatch.setattr("memvo.importers.csv_rows.csv.reader", broken_reader)
+    with pytest.raises(ValueError, match="not a readable CSV file"):
+        read_csv("date,amount\n2026-11-01,-5.00\n")

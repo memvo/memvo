@@ -111,7 +111,11 @@ def read_csv(text: str, overrides: dict[str, str] | None = None) -> CsvResult:
     except csv.Error:
         dialect = csv.excel
 
-    records = [r for r in _records(text, dialect) if any(c.strip() for c in r[3])]
+    try:
+        records = [r for r in _records(text, dialect) if any(c.strip() for c in r[3])]
+    except csv.Error as exc:
+        # Python 3.10's csv module rejects NUL bytes; later versions read them.
+        raise ValueError(f"not a readable CSV file: {exc}") from exc
     if not records:
         return CsvResult(ColumnMap(date=""), [], [])
 
