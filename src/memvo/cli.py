@@ -165,6 +165,12 @@ def cmd_mcp(args) -> int:
     return 0
 
 
+def cmd_demo(args) -> int:
+    from .demo import run
+
+    return run(main, keep=args.keep)
+
+
 def cmd_stats(args) -> int:
     with _vault(args) as v:
         s = v.stats()
@@ -221,6 +227,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("stats", parents=[common], help="vault summary").set_defaults(fn=cmd_stats)
     sub.add_parser("mcp", parents=[common], help="run the read-only MCP server on stdio").set_defaults(fn=cmd_mcp)
+
+    s = sub.add_parser("demo", help="guided run on made-up statements, in a throwaway folder")
+    s.add_argument("--keep", metavar="DIR", help="write the demo files and vault to DIR and keep them")
+    s.set_defaults(fn=cmd_demo)
     return p
 
 

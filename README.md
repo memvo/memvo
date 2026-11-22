@@ -74,6 +74,28 @@ memvo init
 The vault lives at `~/.memvo/vault.db`, or `$MEMVO_HOME/vault.db`, or wherever
 `--vault` points.
 
+To see it work before importing anything of your own:
+
+```bash
+memvo demo
+```
+
+It imports two made-up statements into a throwaway folder, searches, shows a
+receipt, reconciles both accounts, then edits one line of the sample CSV and
+lets `audit` catch it. Your own vault is never opened. `--keep DIR` keeps the
+files.
+
+### Verify the package
+
+Releases are built and uploaded by
+[`publish.yml`](.github/workflows/publish.yml) through PyPI trusted
+publishing, and each file carries a signed provenance attestation that names
+this repository and workflow:
+
+```bash
+curl -s https://pypi.org/integrity/memvo/0.1.0a1/memvo-0.1.0a1-py3-none-any.whl/provenance
+```
+
 ## Use
 
 ```bash
