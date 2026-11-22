@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.1.0a3 (2026-11-22)
+
+- Listed in the official MCP Registry as `pro.memvo/memvo` (`server.json`).
+- `ROADMAP.md`: what is planned next, and what is not planned.
+
 ## 0.1.0a2 (2026-11-22)
 
 - `memvo demo`: a guided run on made-up statements in a throwaway folder,

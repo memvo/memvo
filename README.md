@@ -93,7 +93,7 @@ publishing, and each file carries a signed provenance attestation that names
 this repository and workflow:
 
 ```bash
-curl -s https://pypi.org/integrity/memvo/0.1.0a2/memvo-0.1.0a2-py3-none-any.whl/provenance
+curl -s https://pypi.org/integrity/memvo/0.1.0a3/memvo-0.1.0a3-py3-none-any.whl/provenance
 ```
 
 ## Use
@@ -190,8 +190,12 @@ server tells the client to cite the source line instead of estimating.
 | Reconcile (running and expected balance) | Live |
 | MCP server for agents (read-only) | Live |
 | OFX / QFX import (1.x SGML and 2.x XML) | Live |
+| Guided demo (`memvo demo`) | Live |
+| Listed in the MCP Registry (`pro.memvo/memvo`) | Live |
 | PDF statement text import | Planned |
 | Wallet import from a public address | Planned |
+
+What comes next, and what will not be built: [ROADMAP.md](ROADMAP.md).
 
 ## Development
 
@@ -213,3 +217,5 @@ telemetry. Delete the vault file and the data is gone. The
 ## License
 
 MIT
+
+<!-- mcp-name: pro.memvo/memvo -->
