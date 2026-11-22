@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- PDF text layer reader (`memvo.importers.pdf_text`), standard library only:
+  object streams, Flate/ASCIIHex/ASCII85 streams, simple and composite fonts
+  with ToUnicode, form XObjects. Each printed line keeps its page and line
+  number. Encrypted and scanned PDFs are reported, not read.
+
 ## 0.1.0a3 (2026-11-22)
 
 - Listed in the official MCP Registry as `pro.memvo/memvo` (`server.json`).
