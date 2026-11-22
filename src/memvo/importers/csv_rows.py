@@ -82,6 +82,7 @@ class ImportedRow:
     fields: dict[str, str] = field(default_factory=dict)
     ref: str = ""
     pos: int | None = None
+    page: int | None = None
 
 
 @dataclass
