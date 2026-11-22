@@ -1,0 +1,37 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "pro.memvo/memvo",
+  "title": "Memvo",
+  "description": "Read-only tools over your own bank statements. Every answer cites the line it came from.",
+  "version": "0.1.0a3",
+  "websiteUrl": "https://memvo.pro",
+  "repository": {
+    "url": "https://github.com/memvo/memvo",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "memvo",
+      "version": "0.1.0a3",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "MEMVO_HOME",
+          "description": "Folder that holds vault.db. Defaults to ~/.memvo.",
+          "isRequired": false,
+          "format": "filepath"
+        }
+      ]
+    }
+  ]
+}
