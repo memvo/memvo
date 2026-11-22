@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `memvo demo`: a guided run on made-up statements in a throwaway folder,
+  ending with `audit` catching an edited source line.
 - Fix: on Python 3.10 a CSV file containing NUL bytes crashed the import with
   `_csv.Error`. Such files are now rejected on every Python version with the
   line of the first NUL byte. Found by the new robustness tests.
