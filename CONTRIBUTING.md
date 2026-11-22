@@ -34,6 +34,9 @@ A new bank layout is the most useful contribution. Please:
 - Keep entries verbatim. Anything that rewrites, summarises or guesses at a
   stored row will not be merged.
 - New run-time dependencies need a strong reason.
+- `main` is protected: every change, including the maintainers', lands
+  through a pull request with signed commits and a green test matrix on
+  Linux, macOS and Windows plus CodeQL. Force pushes and deletion are blocked.
 
 ## Security
 
