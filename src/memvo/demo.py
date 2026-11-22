@@ -14,7 +14,7 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Callable
 
-SAMPLES = ("checking.csv", "card.qfx")
+SAMPLES = ("checking.csv", "card.qfx", "savings.pdf")
 
 
 def _say(text: str) -> None:
@@ -50,24 +50,26 @@ def _walkthrough(main: Callable[[list[str]], int], base: Path) -> int:
     print("Memvo demo on made-up statements in", base)
     print("Your own vault is not opened.")
 
-    _say("Import a bank CSV and a card QFX. Rows are stored verbatim.")
+    _say("Import a bank CSV, a card QFX and a savings PDF. Rows are stored verbatim.")
     memvo("init")
     memvo("import", "checking.csv", "--account", "checking")
     memvo("import", "card.qfx", "--account", "card", "--kind", "card")
+    memvo("import", "savings.pdf", "--account", "savings")
 
-    _say("Ask a question. Every hit points at a file and a line.")
+    _say("Ask a question. Every hit points at a file and a line, and a PDF hit at its page.")
     memvo("search", "streamly")
 
-    _say("Open one entry to see its receipt.")
+    _say("Open the PDF entry to see its receipt: the page and the printed line.")
     from .vault import Vault
 
     with Vault(vault) as v:
-        entry = v.search("streamly", limit=1)[0]
+        entry = next(e for e in v.search("streamly") if e.page)
     memvo("show", entry.id)
 
     _say("Check the balances against what the statements say.")
     memvo("reconcile", "--account", "checking", "--expect", "4131.82")
     memvo("reconcile", "--account", "card", "--expect", "statement")
+    memvo("reconcile", "--account", "savings", "--expect", "statement", "--opening", "4150.00")
 
     _say("Someone edits the CSV after import: rent 1450.00 becomes 1405.00.")
     checking.write_text(checking.read_text().replace("-1450.00", "-1405.00"))

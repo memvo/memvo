@@ -32,7 +32,8 @@ Every result that mentions an entry carries:
 ```
 
 Multi-line rows give a range such as `"12-14"`. OFX entries add `bank_ref`, the
-bank's FITID.
+bank's FITID. PDF entries add `page`, and `lines` counts printed lines on that
+page.
 
 The server's `instructions` ask the agent to cite the receipt before stating
 an amount, and to say so when nothing matches instead of estimating.

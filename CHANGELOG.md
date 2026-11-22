@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.0a1 (2026-11-22)
+
 - PDF text layer reader (`memvo.importers.pdf_text`), standard library only:
   object streams, Flate/ASCIIHex/ASCII85 streams, simple and composite fonts
   with ToUnicode, form XObjects. Each printed line keeps its page and line
@@ -16,6 +18,7 @@
 - Receipts of PDF entries carry the `page` they were printed on, and
   `memvo audit` re-checks them against a fresh extraction of that page.
 - Vault schema 3 adds the page column; older vaults are migrated on open.
+- `memvo demo` also imports a made-up savings PDF and shows its receipt.
 
 ## 0.1.0a3 (2026-11-22)
 

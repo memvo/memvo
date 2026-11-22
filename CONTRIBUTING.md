@@ -27,6 +27,11 @@ A new bank layout is the most useful contribution. Please:
    if they are not detected already.
 3. Add a test that imports the file and checks a receipt.
 
+For a PDF layout, write the made-up statement in HTML and print it to PDF
+(headless Chrome: `--headless --print-to-pdf=out.pdf`), or build it with
+`tests/pdfgen.py`. Header words go in `_ROLES` in
+`src/memvo/importers/pdf_rows.py`.
+
 ## Pull requests
 
 - One topic per pull request, with a line in `CHANGELOG.md` under

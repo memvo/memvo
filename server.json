@@ -3,7 +3,7 @@
   "name": "pro.memvo/memvo",
   "title": "Memvo",
   "description": "Read-only tools over your own bank statements. Every answer cites the line it came from.",
-  "version": "0.1.0a3",
+  "version": "0.2.0a1",
   "websiteUrl": "https://memvo.pro",
   "repository": {
     "url": "https://github.com/memvo/memvo",
@@ -14,7 +14,7 @@
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "memvo",
-      "version": "0.1.0a3",
+      "version": "0.2.0a1",
       "transport": {
         "type": "stdio"
       },

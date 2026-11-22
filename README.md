@@ -15,9 +15,9 @@ Memvo keeps every transaction verbatim, next to the SHA-256 of the file it
 was read from. It never summarises, categorises with a model, or sends data
 anywhere. Your vault is one SQLite file on your machine.
 
-> **Status: pre-alpha.** The output below is from `tests/fixtures/checking.csv`. CSV import, search, audit and reconcile work and are
-> tested, and agents can read the vault over MCP. PDF import and on-chain wallet import are not
-> built yet. See [Status](#status).
+> **Status: pre-alpha.** The output below is from `tests/fixtures/checking.csv`. CSV, OFX/QFX and
+> text-based PDF import, search, audit and reconcile work and are tested, and agents can read the
+> vault over MCP. On-chain wallet import is not built yet. See [Status](#status).
 
 ## Why
 
@@ -80,9 +80,9 @@ To see it work before importing anything of your own:
 memvo demo
 ```
 
-It imports two made-up statements into a throwaway folder, searches, shows a
-receipt, reconciles both accounts, then edits one line of the sample CSV and
-lets `audit` catch it. Your own vault is never opened. `--keep DIR` keeps the
+It imports three made-up statements (CSV, QFX and PDF) into a throwaway
+folder, searches, shows the receipt of a PDF entry, reconciles all three
+accounts, then edits one line of the sample CSV and lets `audit` catch it. Your own vault is never opened. `--keep DIR` keeps the
 files.
 
 ### Verify the package
@@ -93,7 +93,7 @@ publishing, and each file carries a signed provenance attestation that names
 this repository and workflow:
 
 ```bash
-curl -s https://pypi.org/integrity/memvo/0.1.0a3/memvo-0.1.0a3-py3-none-any.whl/provenance
+curl -s https://pypi.org/integrity/memvo/0.2.0a1/memvo-0.2.0a1-py3-none-any.whl/provenance
 ```
 
 ## Use
@@ -103,6 +103,7 @@ memvo import ~/Downloads/checking.csv --account checking
 memvo import mutasi.csv --account tabungan          # ; separators, 1.234,56 amounts, debet/kredit columns
 memvo import export.csv --account broker --kind broker --map amount=Net
 memvo import download.qfx --account card            # OFX/QFX is recognised from the content
+memvo import november.pdf --account savings          # text-based PDF statements
 
 memvo search rent                       # every hit carries its receipt
 memvo search coffee --period 2026-11
@@ -113,7 +114,7 @@ memvo periods --account checking
 
 memvo audit                             # re-hash every source, check every row
 memvo reconcile --account checking --expect 4131.82
-memvo reconcile --account checking --expect statement   # use the ledger balance in the newest OFX
+memvo reconcile --account checking --expect statement   # closing balance of the newest OFX or PDF
 ```
 
 Add `--json` to any command for machine-readable output.
@@ -138,10 +139,32 @@ the statement's ledger balance is remembered for `reconcile --expect statement`.
 Overlapping downloads are matched on `FITID`. Files that are not UTF-8 are read
 as Windows-1252.
 
+Text-based PDF statements are read with the standard library: no PDF
+package is installed. A row is a printed line that starts with a date and
+ends with amounts. Which amount is the debit, credit or balance comes from
+the column header above it (`Debit`, `Credit`, `Amount`, `Balance`, `Mutasi`,
+`Saldo`, …), from a `DB`/`DR`/`CR` marker, or from the running balance.
+Text-only lines under a row, such as a reference, are joined to it. Dates
+without a year (`05/11`, `05 Nov`) take it from the full dates printed
+elsewhere on the statement. The opening and closing balances are read too.
+
+```text
+$ memvo import november.pdf --account savings     # tests/fixtures/pdf/statement-chrome.pdf
+savings: 11 entries added from november.pdf (pdf)
+source sha256 35e096770fcd6bd4…
+statement balance 5,610.25 as of 2026-11-28
+opening balance 4,150.00 (pass --opening 4,150.00 to reconcile)
+```
+
+The receipt of a PDF entry names the page and the printed lines. Encrypted
+PDFs must be saved unprotected first, and scanned PDFs (pictures of text) are
+reported page by page, not read.
+
 ### Audit
 
 `memvo audit` re-reads every imported file. If the file hash still matches,
-each entry's raw text is compared with the bytes on disk. A file that changed
+each entry's raw text is compared with the bytes on disk; a PDF entry is
+compared with a fresh extraction of its page. A file that changed
 or disappeared is reported as `CHANGED` or `MISSING`; its entries are kept as
 they were imported. It also lists likely duplicates across overlapping
 exports (same account, day, amount and text in two different files).
@@ -157,7 +180,7 @@ run in a cron job or CI.
 - **Expected balance.** `--expect` compares the sum of entries (plus
   `--opening`, up to `--as-of`) with a figure you read off a statement or a
   wallet. `--expect statement` takes that figure from the newest imported
-  OFX ledger balance.
+  OFX ledger balance or PDF closing balance.
 
 ## Agents (MCP)
 
@@ -192,7 +215,7 @@ server tells the client to cite the source line instead of estimating.
 | OFX / QFX import (1.x SGML and 2.x XML) | Live |
 | Guided demo (`memvo demo`) | Live |
 | Listed in the MCP Registry (`pro.memvo/memvo`) | Live |
-| PDF statement text import | Planned |
+| PDF statement import (text-based) | Live |
 | Wallet import from a public address | Planned |
 
 What comes next, and what will not be built: [ROADMAP.md](ROADMAP.md).

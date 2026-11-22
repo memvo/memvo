@@ -9,6 +9,8 @@ def test_demo_runs_and_cleans_up(capsys, tmp_path, monkeypatch):
     out = capsys.readouterr().out
     assert "$ memvo search streamly" in out
     assert "checking.csv:7" in out
+    assert "savings.pdf:p1:9" in out
+    assert "11 entries added from savings.pdf (pdf)" in out
     assert "difference 0.00" in out
     assert "[CHANGED] checking.csv" in out
     # the user's own vault was never created
@@ -21,5 +23,5 @@ def test_demo_keep(capsys, tmp_path):
     keep = tmp_path / "kept"
     assert main(["demo", "--keep", str(keep)]) == 0
     assert (keep / "vault.db").exists()
-    assert (keep / "card.qfx").exists()
+    assert (keep / "card.qfx").exists() and (keep / "savings.pdf").exists()
     assert "Demo files kept in" in capsys.readouterr().out
