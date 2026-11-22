@@ -30,6 +30,12 @@ Nothing else is written. There is no config file, cache, log or telemetry.
   expansion, `eval` or shell call. Bad rows are skipped and reported with
   their line number. `tests/test_robustness.py` feeds the readers random
   input on every CI run.
+- **Malformed or hostile PDF files.** The PDF reader
+  (`src/memvo/importers/pdf_text.py`) only decodes text: it never runs
+  JavaScript, opens embedded files or follows links, and object references
+  and form nesting are depth-limited. `tests/test_pdf_text.py` imports
+  randomly damaged PDFs on every CI run; they either read or fail with a
+  plain error.
 - **SQL injection.** Every value reaches SQLite as a bound parameter. SQL
   text is assembled only from fixed fragments in `vault.py`, never from
   input.

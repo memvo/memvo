@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "memvo"
-version = "0.1.0a3"
+version = "0.2.0a1"
 description = "Local-first financial memory for agents. Every answer comes with the line it came from."
 readme = "README.md"
 requires-python = ">=3.10"
