@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.0a2 (2026-11-22)
+
 - `memvo demo`: a guided run on made-up statements in a throwaway folder,
   ending with `audit` catching an edited source line.
 - Fix: on Python 3.10 a CSV file containing NUL bytes crashed the import with
