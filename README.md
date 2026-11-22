@@ -67,7 +67,7 @@ vault ── accounts ── periods (YYYY-MM) ── entries ── receipt
 Requires Python 3.10 or newer. No other dependencies.
 
 ```bash
-pip install memvo   # 0.1.0a1, pre-alpha
+pip install memvo   # pre-alpha
 memvo init
 ```
 
@@ -93,7 +93,7 @@ publishing, and each file carries a signed provenance attestation that names
 this repository and workflow:
 
 ```bash
-curl -s https://pypi.org/integrity/memvo/0.1.0a1/memvo-0.1.0a1-py3-none-any.whl/provenance
+curl -s https://pypi.org/integrity/memvo/0.1.0a2/memvo-0.1.0a2-py3-none-any.whl/provenance
 ```
 
 ## Use
