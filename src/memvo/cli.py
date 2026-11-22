@@ -52,18 +52,20 @@ def cmd_import(args) -> int:
         lines[0] = f"{r.account}: file already imported ({r.already_present} entries), nothing added"
     if r.skipped:
         lines.append(f"{len(r.skipped)} rows skipped:")
-        lines += [f"  line {n}: {why}" for n, why in r.skipped[:10]]
+        lines += [f"  {n if isinstance(n, str) else f'line {n}'}: {why}" for n, why in r.skipped[:10]]
     if r.columns:
         lines.append("columns: " + ", ".join(f"{k}={v}" for k, v in r.columns.items()))
     if r.statement_balance is not None:
         lines.append(f"statement balance {r.statement_balance} as of {r.statement_as_of}")
+    if r.statement_opening is not None:
+        lines.append(f"opening balance {r.statement_opening} (pass --opening {r.statement_opening} to reconcile)")
     _emit(args, r.__dict__, "\n".join(lines))
     return 0
 
 
 def _entry_line(e) -> str:
     who = e.counterparty or e.description
-    return f"{e.day}  {e.amount_text:>14}  {e.account:<12} {who[:48]}\n    {e.id}  {Path(e.source_path).name}:{e.first_line}"
+    return f"{e.day}  {e.amount_text:>14}  {e.account:<12} {who[:48]}\n    {e.id}  {Path(e.source_path).name}:{f'p{e.page}:' if e.page else ''}{e.first_line}"
 
 
 def cmd_search(args) -> int:
@@ -84,9 +86,10 @@ def cmd_show(args) -> int:
         print(f"no entry {args.entry}", file=sys.stderr)
         return 1
     r = e.receipt()
+    where = f"page {r['page']}, " if "page" in r else ""
     text = (
         f"{e.id}\n{e.day}  {e.amount_text}  {e.currency or ''}  {e.account}\n"
-        f"{e.description}\n\nreceipt\n  source  {r['source']} (line{'s' if '-' in r['lines'] else ''} {r['lines']})\n"
+        f"{e.description}\n\nreceipt\n  source  {r['source']} ({where}line{'s' if '-' in r['lines'] else ''} {r['lines']})\n"
         f"  file    sha256 {r['source_sha256']}\n  row     sha256 {r['raw_sha256']}\n  raw     {r['raw']}"
     )
     _emit(args, e.as_dict(), text)
@@ -188,7 +191,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("init", parents=[common], help="create a vault").set_defaults(fn=cmd_init)
 
-    s = sub.add_parser("import", parents=[common], help="import a CSV or OFX/QFX statement")
+    s = sub.add_parser("import", parents=[common], help="import a CSV, OFX/QFX or PDF statement")
     s.add_argument("file")
     s.add_argument("--account", required=True)
     s.add_argument("--kind", default="bank", choices=["bank", "card", "broker", "wallet", "cash", "other"])

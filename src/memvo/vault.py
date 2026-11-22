@@ -18,9 +18,11 @@ from pathlib import Path
 
 from .importers.csv_rows import read_csv
 from .importers.ofx_rows import looks_like_ofx, read_ofx
+from .importers.pdf_rows import read_pdf_pages
+from .importers.pdf_text import extract, looks_like_pdf
 from .money import fmt, to_scaled
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 _MIGRATIONS = {
     # 1 -> 2: OFX support (bank transaction ids, statement ledger balance)
@@ -29,6 +31,8 @@ _MIGRATIONS = {
         "ALTER TABLE sources ADD COLUMN stated_as_of TEXT",
         "ALTER TABLE entries ADD COLUMN ref TEXT NOT NULL DEFAULT ''",
     ),
+    # 2 -> 3: PDF statements (the page an entry was printed on)
+    2: ("ALTER TABLE entries ADD COLUMN page INTEGER",),
 }
 
 _SCHEMA = """
@@ -68,7 +72,8 @@ CREATE TABLE IF NOT EXISTS entries (
     counterparty TEXT NOT NULL,
     balance INTEGER,
     fingerprint TEXT NOT NULL,
-    ref TEXT NOT NULL DEFAULT ''
+    ref TEXT NOT NULL DEFAULT '',
+    page INTEGER
 );
 CREATE INDEX IF NOT EXISTS entries_account_day ON entries(account, day);
 CREATE INDEX IF NOT EXISTS entries_fingerprint ON entries(fingerprint);
@@ -127,11 +132,12 @@ class ImportReport:
     account: str
     added: int
     already_present: int
-    skipped: list[tuple[int, str]]
+    skipped: list[tuple[int | str, str]]
     columns: dict[str, str | None]
     format: str = "csv"
     statement_balance: str | None = None
     statement_as_of: str | None = None
+    statement_opening: str | None = None
 
 
 @dataclass(frozen=True)
@@ -151,6 +157,7 @@ class Entry:
     first_line: int
     last_line: int
     ref: str = ""
+    page: int | None = None
 
     @property
     def amount_text(self) -> str:
@@ -161,6 +168,7 @@ class Entry:
         return {
             "entry": self.id,
             "source": self.source_path,
+            **({"page": self.page} if self.page is not None else {}),
             "lines": lines,
             "source_sha256": self.source_sha256,
             "raw_sha256": self.raw_sha256,
@@ -184,7 +192,7 @@ class Entry:
 
 _ENTRY_COLS = (
     "e.id, e.account, e.day, e.amount, e.currency, e.description, e.counterparty, e.balance, "
-    "e.raw, e.raw_sha256, s.path, s.sha256, e.first_line, e.last_line, e.ref"
+    "e.raw, e.raw_sha256, s.path, s.sha256, e.first_line, e.last_line, e.ref, e.page"
 )
 
 
@@ -283,13 +291,21 @@ class Vault:
         kind: str = "bank",
         columns: dict[str, str] | None = None,
     ) -> ImportReport:
-        """Import a CSV or OFX/QFX file. The format is decided from the content."""
+        """Import a CSV, OFX/QFX or PDF file. The format is decided from the content."""
         p = Path(path).expanduser().resolve()
         data = p.read_bytes()
         digest = sha256_bytes(data)
-        text = decode_text(data)
-        stated = stated_as_of = None
-        if looks_like_ofx(text):
+        stated = stated_as_of = opening = None
+        text = "" if looks_like_pdf(data) else decode_text(data)
+        if looks_like_pdf(data):
+            fmt_name = "pdf"
+            pdf = read_pdf_pages(extract(data))
+            rows, skipped, cols = pdf.rows, pdf.skipped, {}
+            if pdf.ledger_balance is not None and pdf.ledger_as_of is not None:
+                stated, stated_as_of = to_scaled(pdf.ledger_balance), pdf.ledger_as_of.isoformat()
+            if pdf.opening_balance is not None:
+                opening = fmt(to_scaled(pdf.opening_balance))
+        elif looks_like_ofx(text):
             fmt_name = "ofx"
             ofx = read_ofx(text)
             rows, skipped, cols = ofx.rows, ofx.skipped, {}
@@ -311,7 +327,7 @@ class Vault:
                 ).fetchone()[0]
                 return ImportReport(
                     existing[0], str(p), digest, account, 0, count, skipped, cols, fmt_name,
-                    fmt(stated) if stated is not None else None, stated_as_of,
+                    fmt(stated) if stated is not None else None, stated_as_of, opening,
                 )
             cur = self.db.execute(
                 "INSERT INTO sources(path, sha256, account, format, rows, skipped, imported_at, "
@@ -325,8 +341,8 @@ class Vault:
                 day = row.when.isoformat()
                 self.db.execute(
                     "INSERT INTO entries(id, source_id, account, first_line, last_line, raw, raw_sha256, "
-                    "day, period, amount, currency, description, counterparty, balance, fingerprint, ref) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "day, period, amount, currency, description, counterparty, balance, fingerprint, ref, page) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (
                         entry_id(digest, row.first_line if row.pos is None else row.pos, row.raw),
                         source_id, account,
@@ -334,13 +350,13 @@ class Vault:
                         day, day[:7], amount, row.currency, row.description, row.counterparty,
                         to_scaled(row.balance) if row.balance is not None else None,
                         fingerprint(account, day, amount, row.description or row.counterparty, row.ref),
-                        row.ref,
+                        row.ref, row.page,
                     ),
                 )
                 added += 1
         return ImportReport(
             source_id, str(p), digest, account, added, 0, skipped, cols, fmt_name,
-            fmt(stated) if stated is not None else None, stated_as_of,
+            fmt(stated) if stated is not None else None, stated_as_of, opening,
         )
 
     def get(self, entry_id_: str) -> Entry | None:
@@ -362,7 +378,7 @@ class Vault:
         if until:
             sql += " AND e.day <= ?"
             args.append(until)
-        sql += " ORDER BY e.day, e.source_id, e.first_line"
+        sql += " ORDER BY e.day, e.source_id, e.page, e.first_line"
         return [Entry(*r) for r in self.db.execute(sql, args)]
 
     def search(

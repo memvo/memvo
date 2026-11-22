@@ -6,6 +6,16 @@
   object streams, Flate/ASCIIHex/ASCII85 streams, simple and composite fonts
   with ToUnicode, form XObjects. Each printed line keeps its page and line
   number. Encrypted and scanned PDFs are reported, not read.
+- `memvo import` reads text-based PDF statements. Rows are lines that start
+  with a date and end with amounts; debit, credit and balance come from the
+  column header above them, a DB/DR/CR marker, or the running balance.
+  Text-only lines under a row (a reference, a second payee line) join it.
+  Opening and closing balances are recognised; the closing one feeds
+  `reconcile --expect statement`. Lines that start with a date but cannot be
+  read are listed with their page and line.
+- Receipts of PDF entries carry the `page` they were printed on, and
+  `memvo audit` re-checks them against a fresh extraction of that page.
+- Vault schema 3 adds the page column; older vaults are migrated on open.
 
 ## 0.1.0a3 (2026-11-22)
 

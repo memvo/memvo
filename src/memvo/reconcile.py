@@ -110,7 +110,7 @@ def reconcile(
             continue
         rows = vault.db.execute(
             "SELECT id, day, amount, balance FROM entries WHERE source_id=? AND balance IS NOT NULL "
-            "ORDER BY first_line",
+            "ORDER BY page, first_line",
             (src["id"],),
         ).fetchall()
         if len(rows) < 2:

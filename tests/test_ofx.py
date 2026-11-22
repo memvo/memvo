@@ -91,7 +91,8 @@ def test_migrates_v1_vault(tmp_path, files):
         v.import_file(files / "checking.csv", "checking")
         for stmt in ("ALTER TABLE sources DROP COLUMN stated_balance",
                      "ALTER TABLE sources DROP COLUMN stated_as_of",
-                     "ALTER TABLE entries DROP COLUMN ref"):
+                     "ALTER TABLE entries DROP COLUMN ref",
+                     "ALTER TABLE entries DROP COLUMN page"):
             v.db.execute(stmt)
         v.db.execute("UPDATE meta SET value='1' WHERE key='schema'")
         v.db.commit()

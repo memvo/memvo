@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .importers.pdf_text import PdfError, extract
 from .vault import Vault, decode_text, sha256_bytes, sha256_text
 
 
@@ -43,7 +44,8 @@ def audit(vault: Vault) -> AuditReport:
     checks: list[SourceCheck] = []
     for src in vault.sources():
         rows = vault.db.execute(
-            "SELECT id, first_line, last_line, raw, raw_sha256 FROM entries WHERE source_id=? ORDER BY first_line",
+            "SELECT id, first_line, last_line, raw, raw_sha256, page FROM entries WHERE source_id=? "
+            "ORDER BY page, first_line",
             (src["id"],),
         ).fetchall()
         path = Path(src["path"])
@@ -54,13 +56,24 @@ def audit(vault: Vault) -> AuditReport:
         if sha256_bytes(data) != src["sha256"]:
             checks.append(SourceCheck(src["id"], src["path"], "changed", len(rows)))
             continue
-        lines = decode_text(data).splitlines(keepends=True)
         bad = []
-        # CSV rows equal their line range; an OFX block may share a line with others.
-        for eid, first, last, raw, raw_sha in rows:
-            on_disk = "".join(lines[first - 1 : last]).rstrip("\r\n")
-            if raw not in on_disk or sha256_text(raw) != raw_sha:
-                bad.append(eid)
+        if src["format"] == "pdf":
+            # A PDF entry is checked against a fresh extraction of its page.
+            try:
+                pages = {p.number: [ln.text for ln in p.lines] for p in extract(data)}
+            except PdfError:
+                pages = {}
+            for eid, first, last, raw, raw_sha, page in rows:
+                printed = "\n".join(pages.get(page, [])[first - 1 : last])
+                if raw != printed or sha256_text(raw) != raw_sha:
+                    bad.append(eid)
+        else:
+            lines = decode_text(data).splitlines(keepends=True)
+            # CSV rows equal their line range; an OFX block may share a line with others.
+            for eid, first, last, raw, raw_sha, _page in rows:
+                on_disk = "".join(lines[first - 1 : last]).rstrip("\r\n")
+                if raw not in on_disk or sha256_text(raw) != raw_sha:
+                    bad.append(eid)
         checks.append(SourceCheck(src["id"], src["path"], "ok", len(rows), bad))
 
     dupes = [
